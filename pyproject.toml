@@ -1,0 +1,18 @@
+[tool.pdm]
+
+[project]
+name = ""
+version = ""
+description = ""
+authors = [
+    {name = "Nicolas Rouquette", email = "nfr@jpl.nasa.gov"},
+]
+dependencies = [
+    "p-tqdm>=1.4.0",
+    "joblib>=1.2.0",
+    "Pacti @ git+https://github.com/pacti-org/pacti.git@4caf43b",
+    "py-cpuinfo>=9.0.0",
+    "ipympl>=0.9.3",
+]
+requires-python = ">=3.11,<3.12"
+license = {text = "MIT"}
