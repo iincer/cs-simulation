@@ -1,6 +1,6 @@
 from pacti.terms.polyhedra import *
 from pacti.iocontract import Var
-from typing import Dict
+from typing import Dict, Optional
 import pacti.terms.polyhedra.plots as plh_plots
 import matplotlib.pyplot as plt
 from matplotlib.figure import Figure as MplFigure
@@ -53,3 +53,45 @@ def plot_input_output_polyhedral_term_list(ptl: PolyhedralTermList, x_var: Var, 
     
     return fig
 
+def scenario_sequence(
+    c1: PolyhedralContract,
+    c2: PolyhedralContract,
+    variables: list[str],
+    c1index: int,
+    c2index: Optional[int] = None,
+    file_name: Optional[str] = None,
+) -> PolyhedralContract:
+    """
+    Composes c1 with a c2 modified to rename its entry variables according to c1's exit variables
+
+    Args:
+        c1: preceding step in the scenario sequence
+        c2: next step in the scenario sequence
+        variables: list of entry/exit variable names for renaming
+        c1index: the step number for c1's variable names
+        c2index: the step number for c2's variable names; defaults ti c1index+1 if unspecified
+
+    Returns:
+        c1 composed with a c2 modified to rename its c2index-entry variables
+        to c1index-exit variables according to the variable name correspondences
+        with a post-composition renaming of c1's exit variables to fresh outputs
+        according to the variable names.
+    """
+    if not c2index:
+        c2index = c1index + 1
+    c2_inputs_to_c1_outputs = [(f"{v}{c2index}_entry", f"{v}{c1index}_exit") for v in variables]
+    keep_c1_outputs = [f"{v}{c1index}_exit" for v in variables]
+    renamed_c1_outputs = [(f"{v}{c1index}_exit", f"output_{v}{c1index}") for v in variables]
+
+    c2_with_inputs_renamed = c2.rename_variables(c2_inputs_to_c1_outputs)
+    c12_with_outputs_kept = c1.compose(c2_with_inputs_renamed, vars_to_keep=keep_c1_outputs)
+    c12 = c12_with_outputs_kept.rename_variables(renamed_c1_outputs)
+
+    if file_name:
+        write_contracts_to_file(
+            contracts=[c1, c2_with_inputs_renamed, c12_with_outputs_kept],
+            names=["c1", "c2_with_inputs_renamed", "c12_with_outputs_kept"],
+            file_name=file_name,
+        )
+
+    return c12

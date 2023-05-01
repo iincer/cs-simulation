@@ -28,6 +28,7 @@ def charging(s: int, generation: tuple[float, float]) -> PolyhedralContract:
         assumptions=[
             f"0 <= {duration}",
             f"0 <= {t_entry} <= {t_var}",
+            f"0 <= {soc_entry} <= 100",
         ],
         guarantees=[
             # The soc_var ranges from the entry value up to entry value plus the max generation rate times the duration.
@@ -42,9 +43,54 @@ def charging(s: int, generation: tuple[float, float]) -> PolyhedralContract:
             # The current time has lower/upper bounds as the entry/exit times.
             f"{t_entry} <= {t_var} <= {t_exit}",
             # The current state of charge has lower/upper bounds as the entry/exit state of charge.
-            f"{soc_entry} <= {soc_var} <= {soc_exit}",
+            f"{soc_entry} <= {soc_var} <= {soc_exit} <= 100",
         ]
     )
 
 
 
+def discharging(s: int, consumption: tuple[float, float]) -> PolyhedralContract:
+    t_entry=f"t{s}_entry"
+    t_var=f"t{s}_var"
+    t_exit=f"t{s}_exit"
+
+    soc_entry=f"soc{s}_entry"
+    soc_var=f"soc{s}_var"
+    soc_exit=f"soc{s}_exit"
+
+    duration=f"duration{s}"
+    return PolyhedralContract.from_string(
+        input_vars=[
+            t_entry,
+            t_var,
+
+            duration,
+
+            soc_entry
+        ],
+        output_vars=[
+            t_exit,
+            soc_var,
+            soc_exit,
+        ],
+        assumptions=[
+            f"0 <= {duration}",
+            f"0 <= {t_entry} <= {t_var}",
+            f"0 <= {soc_entry} <= 100",
+        ],
+        guarantees=[
+            # The soc_var ranges from the entry value minus the max consumption rate times the duration, up to the entry value.
+            f"0 <= {soc_entry} - {consumption[1]}*{duration} <= {soc_var} <= {soc_entry} <= 100",
+            # The duration is equal to the time between entry/exit.
+            f"{duration} = {t_exit} - {t_entry}",
+            # The lower/upper difference between entry/exit soc is the min/max consumption rate times the duration.
+            f"{consumption[0]}*{duration} <= {soc_entry} - {soc_exit} <= {consumption[1]}*{duration}",
+            # The difference between the entry soc and current soc is bounded by the min/max consumption rate
+            # times the difference between the current time and the time at entry.
+            f"{consumption[0]}*({t_var}-{t_entry}) <= {soc_entry} - {soc_var} <= {consumption[1]}*({t_var}-{t_entry})",
+            # The current time has lower/upper bounds as the entry/exit times.
+            f"{t_entry} <= {t_var} <= {t_exit}",
+            # The current state of charge has lower/upper bounds as the entry/exit state of charge.
+            f"0 <= {soc_exit} <= {soc_var} <= {soc_entry}",
+        ]
+    )
